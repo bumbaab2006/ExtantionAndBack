@@ -1,0 +1,37 @@
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const checkUrlRoutes = require("./routes/checkUrl");
+const historyRoutes = require("./routes/history");
+// Бусад route-уудаа энд нэмнэ
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// --- Middlewares ---
+app.use(cors()); // Frontend болон Extension-оос хандах эрх
+app.use(express.json()); // JSON дата унших
+
+// --- Routes ---
+app.use("/api/check-url", checkUrlRoutes);
+app.use("/api/history", historyRoutes);
+
+// Health Check (Сервер ажиллаж байгаа эсэхийг шалгах)
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "OK", message: "SafeKid Server is running" });
+});
+
+// --- Global Error Handler (Өндөр чанарын гол шинж) ---
+app.use((err, req, res, next) => {
+  console.error("❌ Server Error:", err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Internal Server Error",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
+});
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`\n🚀 Server is ready at: http://localhost:${PORT}\n`);
+});

@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  children  Child[]
+}
+
+model Child {
+  id               Int                    @id @default(autoincrement())
+  name             String
+  pin              String?
+  age              Int
+  gender           String?
+  parentId         Int
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  alerts           Alert[]
+  parent           User                   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  categorySettings ChildCategorySetting[]
+  urlSettings      ChildUrlSetting[]
+  history          History[]
+}
+
+model UrlCatalog {
+  id            Int               @id @default(autoincrement())
+  domain        String            @unique
+  categoryName  String
+  safetyScore   Int
+  tags          String[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  childSettings ChildUrlSetting[]
+}
+
+model CategoryCatalog {
+  id            Int                    @id @default(autoincrement())
+  name          String                 @unique
+  childSettings ChildCategorySetting[]
+}
+
+model ChildUrlSetting {
+  id        Int        @id @default(autoincrement())
+  childId   Int
+  urlId     Int
+  status    StatusType @default(ALLOWED)
+  timeLimit Int?
+  child     Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  urlInfo   UrlCatalog @relation(fields: [urlId], references: [id])
+
+  @@unique([childId, urlId])
+}
+
+model ChildCategorySetting {
+  id         Int             @id @default(autoincrement())
+  childId    Int
+  categoryId Int
+  status     StatusType      @default(ALLOWED)
+  timeLimit  Int?
+  category   CategoryCatalog @relation(fields: [categoryId], references: [id])
+  child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, categoryId])
+}
+
+model History {
+  id           Int        @id @default(autoincrement())
+  childId      Int
+  fullUrl      String
+  domain       String
+  title        String?
+  categoryName String
+  duration     Int
+  visitedAt    DateTime   @default(now())
+  actionTaken  StatusType
+  device       String?
+  child        Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, visitedAt])
+  @@index([childId, categoryName])
+}
+
+model Alert {
+  id        Int       @id @default(autoincrement())
+  childId   Int
+  type      AlertType
+  message   String
+  isSent    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  child     Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+}
+
+enum StatusType {
+  ALLOWED
+  BLOCKED
+  LIMITED
+}
+
+enum AlertType {
+  DANGEROUS_CONTENT
+  TIME_LIMIT_EXCEEDED
+  SUSPICIOUS_ACTIVITY
+}
