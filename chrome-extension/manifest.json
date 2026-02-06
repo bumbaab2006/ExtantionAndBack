@@ -1,20 +1,20 @@
 {
   "manifest_version": 3,
   "name": "SafeKid AI Guard",
-  "version": "1.0",
-  "description": "AI-д суурилсан хүүхдийн интернэт хяналтын систем",
-  "permissions": [
-    "declarativeNetRequest",
-    "tabs",
-    "storage",
-    "alarms",
-    "webNavigation"
-  ],
-  "host_permissions": ["http://*/*", "https://*/*", "<all_urls>"],
+  "version": "2.0",
+  "description": "Multi-user AI хяналтын систем",
+  "permissions": ["storage", "webNavigation", "tabs"],
+  "host_permissions": ["http://localhost:5000/*", "<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "login_required.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

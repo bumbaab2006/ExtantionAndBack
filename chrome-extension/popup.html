@@ -3,57 +3,197 @@
   <head>
     <meta charset="UTF-8" />
     <style>
-      body {
-        width: 250px;
-        font-family: "Arial", sans-serif;
-        padding: 15px;
+      :root {
+        --bg: #f2f2f7;
+        --card: #ffffff;
+        --text: #1c1c1e;
+        --subtext: #6e6e73;
+        --border: #e5e5ea;
+        --accent: #007aff;
+        --danger: #ff3b30;
+        --success: #34c759;
       }
-      .input-group {
+
+      body {
+        width: 320px;
+        margin: 0;
+        background: var(--bg);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+          Arial, sans-serif;
+        color: var(--text);
+      }
+
+      .container {
+        padding: 14px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 18px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      h3 {
+        margin: 0 0 14px;
+        font-size: 17px;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      p {
+        font-size: 13px;
+        color: var(--subtext);
+        margin: 6px 0;
+        text-align: center;
+      }
+
+      .status {
+        font-size: 13px;
+        color: var(--success);
         margin-bottom: 10px;
       }
+
       input {
         width: 100%;
-        padding: 5px;
-        margin-top: 5px;
+        box-sizing: border-box;
+        padding: 11px 12px;
+        margin: 6px 0;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        font-size: 14px;
+        outline: none;
+        background: #fff;
+        transition:
+          border 0.15s,
+          box-shadow 0.15s;
       }
+
+      input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+      }
+
       button {
         width: 100%;
-        padding: 8px;
-        background: #2ecc71;
-        color: white;
         border: none;
+        border-radius: 9px;
+        padding: 11px;
+        font-size: 14px;
+        font-weight: 500;
+        margin-top: 8px;
         cursor: pointer;
+        background: var(--accent);
+        color: white;
+        transition:
+          background 0.15s,
+          transform 0.05s;
       }
-      .alert {
-        color: red;
+
+      button:active {
+        transform: scale(0.97);
+      }
+
+      button.secondary {
+        background: #e5e5ea;
+        color: var(--text);
+      }
+
+      button.danger {
+        background: var(--danger);
+      }
+
+      .child-btn {
+        background: #f2f2f7;
+        color: var(--text);
+        border: 1px solid var(--border);
+        margin-bottom: 6px;
+      }
+
+      .child-btn:hover {
+        background: #e9e9ed;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 14px 0;
+      }
+
+      .error {
+        color: var(--danger);
         font-size: 12px;
+        margin-top: 6px;
+        text-align: center;
+      }
+
+      #active-user-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--success);
+        margin: 8px 0;
+        text-align: center;
       }
     </style>
   </head>
+
   <body>
-    <h3>SafeKid AI Control</h3>
-    <div id="lock-screen">
-      <input type="password" id="parent-pass" placeholder="Нууц үг" />
-      <button id="unlock-btn">Нэвтрэх</button>
-    </div>
-    <div id="settings" style="display: none">
-      <div class="input-group">
-        <label>Хориглох сайт/үг:</label>
-        <input type="text" id="new-keyword" placeholder="жишээ: youtube.com" />
+    <div class="container">
+      <div class="card">
+        <div id="view-parent-login" class="hidden">
+          <h3>Эцэг эхийн нэвтрэх</h3>
+          <input type="email" id="p-email" placeholder="И-мэйл" />
+          <input type="password" id="p-pass" placeholder="Нууц үг" />
+          <button id="btn-p-login">Нэвтрэх</button>
+          <p class="error" id="err-login"></p>
+        </div>
+
+        <div id="view-child-select" class="hidden">
+          <h3>Хэн хэрэглэх вэ?</h3>
+          <p class="status">Холболт идэвхтэй</p>
+          <div id="child-list"></div>
+          <hr />
+          <button id="btn-p-logout" class="danger">Эцэг эх гарах</button>
+        </div>
+
+        <div id="view-pin" class="hidden">
+          <h3 id="pin-title">PIN код</h3>
+          <input
+            type="password"
+            id="child-pin"
+            placeholder="4 оронтой PIN"
+            maxlength="4"
+          />
+          <button id="btn-verify-pin">Эхлүүлэх</button>
+          <button id="btn-back-select" class="secondary">Буцах</button>
+          <p class="error" id="err-pin"></p>
+        </div>
+
+        <div id="view-dashboard" class="hidden">
+          <h3>SafeKid</h3>
+          <div id="active-user-name">User</div>
+          <p>Хамгаалалт идэвхтэй</p>
+          <button id="btn-switch-user" class="secondary">
+            Хэрэглэгч солих
+          </button>
+        </div>
+
+        <div id="view-logout-confirm" class="hidden">
+          <h3>Баталгаажуулалт</h3>
+          <p>Эцэг эхийн нууц үг оруулна уу</p>
+          <input type="password" id="logout-pass" placeholder="Нууц үг" />
+          <button id="btn-confirm-logout" class="danger">Гарах</button>
+          <button id="btn-cancel-logout" class="secondary">Болих</button>
+          <p class="error" id="err-logout"></p>
+        </div>
       </div>
-      <button id="add-btn">Нэмэх</button>
-      <h4>Хориглосон сайтууд:</h4>
-      <ul
-        id="blacklist-items"
-        style="
-          list-style: none;
-          padding: 0;
-          max-height: 150px;
-          overflow-y: auto;
-        "
-      ></ul>
-      <p class="alert" id="status-msg"></p>
     </div>
+
     <script src="popup.js"></script>
   </body>
 </html>
