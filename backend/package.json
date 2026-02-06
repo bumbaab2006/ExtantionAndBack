@@ -9,7 +9,11 @@
     "db:studio": "npx prisma studio",
     "seed": "node prisma/seed.js"
   },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "dependencies": {
+    "@faker-js/faker": "^8.4.1",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.9.1",
     "cors": "^2.8.5",

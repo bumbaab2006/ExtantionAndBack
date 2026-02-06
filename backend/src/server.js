@@ -3,6 +3,8 @@ const express = require("express");
 const cors = require("cors");
 const checkUrlRoutes = require("./routes/checkUrl");
 const historyRoutes = require("./routes/history");
+const authRoutes = require("./routes/auth");
+const trackTime = require("./routes/trackTime");
 // Бусад route-уудаа энд нэмнэ
 
 const app = express();
@@ -15,6 +17,9 @@ app.use(express.json()); // JSON дата унших
 // --- Routes ---
 app.use("/api/check-url", checkUrlRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/track-time", trackTime);
+// Бусад route-ууд энд нэмнэ
 
 // Health Check (Сервер ажиллаж байгаа эсэхийг шалгах)
 app.get("/", (req, res) => {

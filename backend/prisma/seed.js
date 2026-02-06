@@ -1,97 +1,115 @@
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient, StatusType, AlertType } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Test хэрэглэгч үүсгэх
-  const user = await prisma.user.upsert({
-    where: { email: "parent@test.com" },
-    update: {},
-    create: {
+  console.log("🧹 Cleaning database...");
+  await prisma.dailyUsage.deleteMany();
+  await prisma.alert.deleteMany();
+  await prisma.history.deleteMany();
+  await prisma.childUrlSetting.deleteMany();
+  await prisma.childCategorySetting.deleteMany();
+  await prisma.urlCatalog.deleteMany();
+  await prisma.categoryCatalog.deleteMany();
+  await prisma.child.deleteMany();
+  await prisma.user.deleteMany();
+
+  console.log("🌱 Seeding realistic data...");
+
+  // 1. Үндсэн категориуд
+  const categories = [
+    "Education",
+    "Social Media",
+    "Games",
+    "Adult",
+    "Entertainment",
+  ];
+  const categoryRecords = [];
+  for (const name of categories) {
+    const cat = await prisma.categoryCatalog.create({ data: { name } });
+    categoryRecords.push(cat);
+  }
+
+  // 2. Үндсэн URL-ууд
+  const urlData = [
+    { domain: "khanacademy.org", categoryName: "Education", safetyScore: 100 },
+    { domain: "roblox.com", categoryName: "Games", safetyScore: 70 },
+    { domain: "facebook.com", categoryName: "Social Media", safetyScore: 60 },
+    { domain: "pornhub.com", categoryName: "Adult", safetyScore: 0 },
+    { domain: "youtube.com", categoryName: "Entertainment", safetyScore: 80 },
+  ];
+
+  for (const item of urlData) {
+    await prisma.urlCatalog.create({
+      data: { ...item, tags: [item.categoryName.toLowerCase()] },
+    });
+  }
+  const urls = await prisma.urlCatalog.findMany();
+
+  // 3. Тест Эцэг эх (Нэвтрэхэд ашиглана)
+  const user = await prisma.user.create({
+    data: {
       email: "parent@test.com",
       password: "password123",
-      name: "Test Parent",
+      name: "Д. Бат",
       verified: true,
     },
   });
 
-  console.log("✅ User үүсгэлээ:", user);
-
-  // 2. Test хүүхэд үүсгэх
-  const child = await prisma.child.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      name: "Test Child",
-      pin: "1234",
-      age: 10,
-      gender: "Male",
-      parentId: user.id,
-    },
+  // 4. Тест Хүүхдүүд
+  const child1 = await prisma.child.create({
+    data: { name: "Анарт", age: 10, pin: "1111", parentId: user.id },
+  });
+  const child2 = await prisma.child.create({
+    data: { name: "Хүслэн", age: 14, pin: "2222", parentId: user.id },
   });
 
-  console.log("✅ Child үүсгэлээ:", child);
-
-  // 3. URL Catalog үүсгэх
-  const urls = [
-    {
-      domain: "youtube.com",
-      categoryName: "Entertainment",
-      safetyScore: 70,
-      tags: ["video", "social"],
-    },
-    {
-      domain: "facebook.com",
-      categoryName: "Social Media",
-      safetyScore: 60,
-      tags: ["social", "chat"],
-    },
-    {
-      domain: "pornhub.com",
-      categoryName: "Adult",
-      safetyScore: 0,
-      tags: ["adult", "nsfw"],
-    },
-    {
-      domain: "wikipedia.org",
-      categoryName: "Education",
-      safetyScore: 100,
-      tags: ["education", "reference"],
-    },
-  ];
-
-  for (const url of urls) {
-    await prisma.urlCatalog.upsert({
-      where: { domain: url.domain },
-      update: {},
-      create: url,
-    });
-  }
-
-  console.log("✅ URL Catalog үүсгэлээ");
-
-  // 4. Child URL Setting үүсгэх (pornhub блоклох)
-  const pornhubUrl = await prisma.urlCatalog.findUnique({
-    where: { domain: "pornhub.com" },
-  });
-
-  if (pornhubUrl) {
-    await prisma.childUrlSetting.upsert({
-      where: {
-        childId_urlId: {
-          childId: child.id,
-          urlId: pornhubUrl.id,
-        },
+  // 5. Settings (Анарт тоглоом 60 мин хязгаартай, Adult блоклогдсон)
+  await prisma.childCategorySetting.createMany({
+    data: [
+      {
+        childId: child1.id,
+        categoryId: categoryRecords.find((c) => c.name === "Games").id,
+        status: "LIMITED",
+        timeLimit: 60,
       },
-      update: {},
-      create: {
-        childId: child.id,
-        urlId: pornhubUrl.id,
+      {
+        childId: child1.id,
+        categoryId: categoryRecords.find((c) => c.name === "Adult").id,
         status: "BLOCKED",
       },
+    ],
+  });
+
+  // 6. Daily Usage (Анарт өнөөдөр 55 мин тоглосон - Тест хийхэд зориулав)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  await prisma.dailyUsage.create({
+    data: {
+      childId: child1.id,
+      categoryId: categoryRecords.find((c) => c.name === "Games").id,
+      date: today,
+      duration: 55 * 60, // 55 минут
+    },
+  });
+
+  // 7. Бага хэмжээний History (Сүүлийн 10)
+  for (let i = 0; i < 10; i++) {
+    const randomUrl = urls[Math.floor(Math.random() * urls.length)];
+    await prisma.history.create({
+      data: {
+        childId: child1.id,
+        fullUrl: `https://${randomUrl.domain}/page-${i}`,
+        domain: randomUrl.domain,
+        categoryName: randomUrl.categoryName,
+        duration: 60,
+        actionTaken: randomUrl.safetyScore < 50 ? "BLOCKED" : "ALLOWED",
+        visitedAt: new Date(Date.now() - i * 3600000),
+      },
     });
   }
 
-  console.log("✅ Settings үүсгэлээ");
+  console.log("✅ Seed finished. Login: parent@test.com / password123");
 }
 
 main()

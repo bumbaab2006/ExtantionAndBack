@@ -32,6 +32,7 @@ model Child {
   categorySettings ChildCategorySetting[]
   urlSettings      ChildUrlSetting[]
   history          History[]
+  dailyUsages      DailyUsage[]           // ШИНЭ
 }
 
 model UrlCatalog {
@@ -49,6 +50,19 @@ model CategoryCatalog {
   id            Int                    @id @default(autoincrement())
   name          String                 @unique
   childSettings ChildCategorySetting[]
+  dailyUsages   DailyUsage[]           // ШИНЭ
+}
+
+model DailyUsage {
+  id          Int             @id @default(autoincrement())
+  childId     Int
+  categoryId  Int
+  date        DateTime        @default(now())
+  duration    Int             @default(0) // Секундээр
+  child       Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  category    CategoryCatalog @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, categoryId, date])
 }
 
 model ChildUrlSetting {
@@ -58,7 +72,7 @@ model ChildUrlSetting {
   status    StatusType @default(ALLOWED)
   timeLimit Int?
   child     Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
-  urlInfo   UrlCatalog @relation(fields: [urlId], references: [id])
+  urlInfo   UrlCatalog @relation(fields: [urlId], references: [id], onDelete: Cascade)
 
   @@unique([childId, urlId])
 }
@@ -69,7 +83,7 @@ model ChildCategorySetting {
   categoryId Int
   status     StatusType      @default(ALLOWED)
   timeLimit  Int?
-  category   CategoryCatalog @relation(fields: [categoryId], references: [id])
+  category   CategoryCatalog @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@unique([childId, categoryId])
