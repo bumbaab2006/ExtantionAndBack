@@ -1,17 +1,31 @@
 const prisma = require("./prisma");
 
-// Өнөөдрийн 00:00 цагийг авах (Улаанбаатарын цагийн бүсээр тооцох боломжтой)
-function getTodayDate() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+// Улаанбаатарын цагаар "Өнөөдөр"-ийн огноог авах (00:00:00)
+// Жишээ: 2026-02-09T00:00:00.000Z (гэхдээ энэ нь UB-ийн өдөр)
+function getUBTodayDate() {
+  const now = new Date();
+  // UB цагаар огноог текст болгож авах (YYYY-MM-DD)
+  const ubDateString = now.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ulaanbaatar",
+  });
+  // Текстийг буцаад Date объект болгох
+  return new Date(ubDateString);
 }
 
-// Хүүхдийн тухайн категори дээрх лимитийг шалгах
-async function checkTimeLimit(childId, categoryId) {
-  const today = getTodayDate();
+// Улаанбаатарын яг одоогийн цагийг авах (History visitedAt-д зориулж)
+function getUBCurrentTime() {
+  const now = new Date();
+  // Одоогийн системийг цагийг UB руу хөрвүүлэх
+  const ubString = now.toLocaleString("en-US", {
+    timeZone: "Asia/Ulaanbaatar",
+  });
+  return new Date(ubString);
+}
 
-  // 1. Одоогийн хэрэглээг DailyUsage-аас харах
+async function checkTimeLimit(childId, categoryId) {
+  const today = getUBTodayDate();
+
+  // 1. Тухайн өдрийн хэрэглээг авах
   const usage = await prisma.dailyUsage.findUnique({
     where: {
       childId_categoryId_date: {
@@ -24,7 +38,7 @@ async function checkTimeLimit(childId, categoryId) {
 
   const usedSeconds = usage ? usage.duration : 0;
 
-  // 2. Тухайн хүүхдийн тухайн категорийн тохиргоог харах
+  // 2. Хүүхдийн тохиргоог шалгах
   const setting = await prisma.childCategorySetting.findUnique({
     where: {
       childId_categoryId: {
@@ -34,12 +48,28 @@ async function checkTimeLimit(childId, categoryId) {
     },
   });
 
-  // Хэрэв LIMITED биш эсвэл лимит байхгүй бол зөвшөөрнө
-  if (!setting || setting.status !== "LIMITED" || !setting.timeLimit) {
+  // --- ШИНЭЧЛЭЛТ: BLOCKED төлөвийг шалгах ---
+  if (!setting) {
     return { isBlocked: false, remainingSeconds: null };
   }
 
-  const limitSeconds = setting.timeLimit * 60; // Минутыг секунд болгох
+  // Хэрэв эцэг эх шууд БЛОКЛОСОН бол хугацаа харахгүй шууд хаана
+  if (setting.status === "BLOCKED") {
+    return {
+      isBlocked: true,
+      usedSeconds,
+      limitSeconds: 0,
+      remainingSeconds: 0,
+    };
+  }
+
+  // Хэрэв хязгаар тогтоогоогүй бол (ALLOWED)
+  if (setting.status !== "LIMITED" || !setting.timeLimit) {
+    return { isBlocked: false, remainingSeconds: null };
+  }
+
+  // 3. LIMITED үед хугацаа шалгах
+  const limitSeconds = setting.timeLimit * 60;
   const isBlocked = usedSeconds >= limitSeconds;
 
   return {
@@ -49,5 +79,3 @@ async function checkTimeLimit(childId, categoryId) {
     remainingSeconds: Math.max(0, limitSeconds - usedSeconds),
   };
 }
-
-module.exports = { getTodayDate, checkTimeLimit };

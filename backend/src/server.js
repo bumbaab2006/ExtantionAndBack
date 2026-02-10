@@ -5,6 +5,7 @@ const checkUrlRoutes = require("./routes/checkUrl");
 const historyRoutes = require("./routes/history");
 const authRoutes = require("./routes/auth");
 const trackTime = require("./routes/trackTime");
+const debug = require("./routes/debug");
 // Бусад route-уудаа энд нэмнэ
 
 const app = express();
@@ -19,6 +20,7 @@ app.use("/api/check-url", checkUrlRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/track-time", trackTime);
+app.use("/api/debug", debug);
 // Бусад route-ууд энд нэмнэ
 
 // Health Check (Сервер ажиллаж байгаа эсэхийг шалгах)

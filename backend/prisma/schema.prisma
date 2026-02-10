@@ -7,10 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// 1. Эцэг эхийн мэдээлэл (Auth - Clerk ашиглахгүй)
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  password  String
+  password  String   // Hash хийгдсэн нууц үг
   name      String?
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -18,51 +19,75 @@ model User {
   children  Child[]
 }
 
+// 2. Хүүхдийн мэдээлэл
 model Child {
   id               Int                    @id @default(autoincrement())
   name             String
   pin              String?
-  age              Int
+  age              Int?
   gender           String?
   parentId         Int
+  parent           User                   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
+  
   alerts           Alert[]
-  parent           User                   @relation(fields: [parentId], references: [id], onDelete: Cascade)
   categorySettings ChildCategorySetting[]
   urlSettings      ChildUrlSetting[]
   history          History[]
-  dailyUsages      DailyUsage[]           // ШИНЭ
+  dailyUsages      DailyUsage[]
 }
 
-model UrlCatalog {
-  id            Int               @id @default(autoincrement())
-  domain        String            @unique
-  categoryName  String
-  safetyScore   Int
-  tags          String[]
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  childSettings ChildUrlSetting[]
-}
-
+// 3. Ангиллын сан (Сошиал, Тоглоом, Боловсрол г.м)
 model CategoryCatalog {
-  id            Int                    @id @default(autoincrement())
-  name          String                 @unique
-  childSettings ChildCategorySetting[]
-  dailyUsages   DailyUsage[]           // ШИНЭ
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @unique
+  childCategorySettings ChildCategorySetting[]
+  dailyUsages           DailyUsage[]
 }
 
+// 4. Өдрийн хэрэглээний статистик
+// 1 минут тутамд increment хийхэд энэ хүснэгт ашиглагдана.
 model DailyUsage {
   id          Int             @id @default(autoincrement())
   childId     Int
   categoryId  Int
-  date        DateTime        @default(now())
-  duration    Int             @default(0) // Секундээр
+  date        DateTime        @db.Date 
+  duration    Int             @default(0)
   child       Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
   category    CategoryCatalog @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([childId, categoryId, date])
+}
+// 5. Вэбээр аялсан түүх (Reels үзэхэд Domain-оор нь багцалж хадгална)
+model History {
+  id           Int        @id @default(autoincrement())
+  childId      Int
+  fullUrl      String     // Хамгийн сүүлд байсан URL (Instagram Reel URL)
+  domain       String     // instagram.com
+  title        String?
+  categoryName String
+  duration     Int        // Тухайн сайт дээр нийт өнгөрүүлсэн хугацаа
+  visitedAt    DateTime   @default(now())
+  actionTaken  StatusType
+  device       String?
+  child        Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, visitedAt])
+}
+
+// 6. Хүүхдийн тохиргоо (Ангилал болон URL-аар блоклох)
+model ChildCategorySetting {
+  id         Int             @id @default(autoincrement())
+  childId    Int
+  categoryId Int
+  status     StatusType      @default(ALLOWED)
+  timeLimit  Int?            // Минутаар
+  category   CategoryCatalog @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, categoryId])
 }
 
 model ChildUrlSetting {
@@ -77,33 +102,15 @@ model ChildUrlSetting {
   @@unique([childId, urlId])
 }
 
-model ChildCategorySetting {
-  id         Int             @id @default(autoincrement())
-  childId    Int
-  categoryId Int
-  status     StatusType      @default(ALLOWED)
-  timeLimit  Int?
-  category   CategoryCatalog @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
-
-  @@unique([childId, categoryId])
-}
-
-model History {
-  id           Int        @id @default(autoincrement())
-  childId      Int
-  fullUrl      String
-  domain       String
-  title        String?
-  categoryName String
-  duration     Int
-  visitedAt    DateTime   @default(now())
-  actionTaken  StatusType
-  device       String?
-  child        Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
-
-  @@index([childId, visitedAt])
-  @@index([childId, categoryName])
+model UrlCatalog {
+  id            Int               @id @default(autoincrement())
+  domain        String            @unique
+  categoryName  String
+  safetyScore   Int?
+  tags          String[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  childSettings ChildUrlSetting[]
 }
 
 model Alert {
